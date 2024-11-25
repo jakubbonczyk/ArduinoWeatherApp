@@ -1,0 +1,23 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Base.Theme.WeatherJavaApp" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Customize your light theme here. -->
+        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+    </style>
+
+    <style name="Widget.ActiveButton" parent="Widget.MaterialComponents.Button">
+        <item name="android:background">@drawable/active_button_radius</item>
+        <item name="backgroundTint">@null</item>
+        <item name="rippleColor">@null</item>
+        <item name="android:textColor">#FFFFFF</item>
+    </style>
+
+
+    <style name="Widget.NonactiveButton" parent="Widget.AppCompat.Button">
+        <item name="android:background">@drawable/active_button_radius</item>
+        <item name="android:textColor">#FFFFFF</item>
+    </style>
+
+
+    <style name="Theme.WeatherJavaApp" parent="Base.Theme.WeatherJavaApp" />
+</resources>
