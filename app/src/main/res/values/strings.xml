@@ -1,3 +1,8 @@
 <resources>
-    <string name="app_name">WeatherJavaApp</string>
+    <!-- Inne ciągi znaków -->
+    <string-array name="chart_types">
+        <item>Temperatura</item>
+        <item>Wilgotność</item>
+        <item>Luminancja</item>
+    </string-array>
 </resources>

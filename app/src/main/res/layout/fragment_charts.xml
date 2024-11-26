@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Wybór daty początkowej -->
+    <TextView
+        android:id="@+id/textViewStartDate"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_edittext"
+        android:clickable="true"
+        android:focusable="false"
+        android:padding="16dp"
+        android:text="Data początkowa"
+        app:layout_constraintEnd_toStartOf="@id/guidelineVertical"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/guideline20"
+        app:layout_constraintWidth_percent="0.45" />
+
+    <!-- Wybór daty końcowej -->
+    <TextView
+        android:id="@+id/textViewEndDate"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_edittext"
+        android:clickable="true"
+        android:focusable="false"
+        android:padding="16dp"
+        android:text="Data końcowa"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/guidelineVertical"
+        app:layout_constraintTop_toTopOf="@+id/guideline20"
+        app:layout_constraintWidth_percent="0.45" />
+
+    <!-- Przycisk do aktualizacji wykresów -->
+    <Button
+        android:id="@+id/buttonUpdateCharts"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Aktualizuj wykresy"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/textViewStartDate" />
+
+    <!-- Etykieta wykresu temperatury -->
+    <TextView
+        android:id="@+id/labelTemperatureChart"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Wykres temperatury"
+        android:textSize="18sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/buttonUpdateCharts" />
+
+    <!-- Wykres temperatury -->
+    <com.github.mikephil.charting.charts.LineChart
+        android:id="@+id/temperatureChart"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toTopOf="@+id/luminanceChart"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHeight_percent="0.25"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/humidityChart" />
+
+    <!-- Wykres wilgotności -->
+    <com.github.mikephil.charting.charts.LineChart
+        android:id="@+id/humidityChart"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHeight_percent="0.25"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/labelTemperatureChart"
+        tools:ignore="MissingConstraints" />
+
+    <!-- Wykres luminancji -->
+    <com.github.mikephil.charting.charts.LineChart
+        android:id="@+id/luminanceChart"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toTopOf="@+id/guideline21"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHeight_percent="0.25"
+        app:layout_constraintStart_toStartOf="parent"
+/>
+
+    <!-- Etykieta wykresu luminancji -->
+    <TextView
+        android:id="@+id/labelLuminanceChart"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Wykres luminancji"
+        android:textSize="18sp"
+        app:layout_constraintBottom_toTopOf="@+id/luminanceChart"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/temperatureChart" />
+
+    <!-- Etykieta wykresu wilgotności -->
+    <TextView
+        android:id="@+id/labelHumidityChart"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Wykres wilgotności"
+        android:textSize="18sp"
+        app:layout_constraintBottom_toTopOf="@+id/temperatureChart"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/humidityChart" />
+
+
+    <!-- Guideline dla podziału ekranu -->
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guidelineVertical"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.5" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline20"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.01" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline21"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.99" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
