@@ -1,6 +1,16 @@
 package com.example.weatherjavaapp;
 
 import android.Manifest;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothGatt;
+import android.bluetooth.BluetoothManager;
+import android.bluetooth.BluetoothProfile;
+import android.bluetooth.BluetoothGattCallback;
+import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattService;
+import android.bluetooth.BluetoothGattDescriptor;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -12,14 +22,6 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothGatt;
-import android.bluetooth.BluetoothProfile;
-import android.bluetooth.BluetoothGattCallback;
-import android.bluetooth.BluetoothGattCharacteristic;
-import android.bluetooth.BluetoothGattService;
-import android.bluetooth.BluetoothGattDescriptor;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -38,6 +40,7 @@ public class MainActivity extends AppCompatActivity {
 
     // Zmienne Bluetooth
     private BluetoothAdapter bluetoothAdapter;
+    private BluetoothManager bluetoothManager;
     private BluetoothGatt bluetoothGatt;
     private BluetoothGattCharacteristic characteristic;
 
@@ -70,6 +73,9 @@ public class MainActivity extends AppCompatActivity {
             return true;
         });
 
+        // Inicjalizacja BluetoothManager
+        bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+
         // Inicjalizacja BluetoothAdapter
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
     }
@@ -91,8 +97,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // Metody obsługi Bluetooth
-    public boolean isBluetoothConnected() {
-        return bluetoothGatt != null && bluetoothGatt.getDevice().getBondState() == BluetoothDevice.BOND_BONDED;
+    public boolean isBluetoothConnected() throws SecurityException {
+        if (bluetoothGatt != null && bluetoothManager != null) {
+            int connectionState = bluetoothManager.getConnectionState(bluetoothGatt.getDevice(), BluetoothProfile.GATT);
+            return connectionState == BluetoothProfile.STATE_CONNECTED;
+        }
+        return false;
     }
 
     public BluetoothGatt getBluetoothGatt() {
@@ -154,12 +164,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // Metoda do wysyłania komend
-    public void sendCommand(String command) {
+    public boolean sendCommand(String command) {
         if (characteristic != null && bluetoothGatt != null) {
             commandQueue.add(command);
             processCommandQueue();
+            return true;
         } else {
             Log.e("BluetoothDebug", "Cannot send command, characteristic or bluetoothGatt is null");
+            return false;
         }
     }
 

@@ -92,18 +92,30 @@ public class HomeFragment extends Fragment {
         // Ustawienie listenera dla przycisku refreshButton
         binding.refreshButton.setOnClickListener(v -> {
             if (mainActivity.isBluetoothConnected()) {
-                mainActivity.sendCommand("Dane\n");
-                mainActivity.sendCommand("Swiatlo\n");
+                // Spróbuj wysłać komendy
+                boolean commandSent = mainActivity.sendCommand("Dane\n");
+                if (commandSent) {
+                    mainActivity.sendCommand("Swiatlo\n");
+                } else {
+                    // Jeśli wysyłanie komendy się nie powiodło, przekieruj do ustawień
+                    redirectToBluetoothSettings();
+                }
             } else {
-                // Spróbuj nawiązać połączenie
-                checkPermissionsAndConnect();
+                // Jeśli nie jesteśmy połączeni, spróbuj nawiązać połączenie
+                connectToBluetooth();
             }
         });
     }
 
-    private void checkPermissionsAndConnect() {
+    private void redirectToBluetoothSettings() {
+        Intent intent = new Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS);
+        startActivity(intent);
+        Toast.makeText(getContext(), "Połącz się z urządzeniem HC-05 w ustawieniach Bluetooth", Toast.LENGTH_LONG).show();
+    }
+
+    private void connectToBluetooth() {
+        // Sprawdzenie uprawnień
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            // Dla Androida 12 i wyżej
             if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED ||
                     ContextCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
 
@@ -113,15 +125,16 @@ public class HomeFragment extends Fragment {
                         Manifest.permission.BLUETOOTH_SCAN
                 });
             } else {
-                connectToBluetooth();
+                // Nawiąż połączenie
+                initiateBluetoothConnection();
             }
         } else {
             // Dla Androida poniżej wersji 12
-            connectToBluetooth();
+            initiateBluetoothConnection();
         }
     }
 
-    private void connectToBluetooth() {
+    private void initiateBluetoothConnection() {
         // Tworzymy nowy callback
         connectionCallback = new MainActivity.BluetoothConnectionCallback() {
             @Override
@@ -130,8 +143,13 @@ public class HomeFragment extends Fragment {
                 HomeFragment.this.characteristic = characteristic;
 
                 // Po połączeniu, wysyłamy komendy
-                mainActivity.sendCommand("Dane\n");
-                mainActivity.sendCommand("Swiatlo\n");
+                boolean commandSent = mainActivity.sendCommand("Dane\n");
+                if (commandSent) {
+                    mainActivity.sendCommand("Swiatlo\n");
+                } else {
+                    // Jeśli wysyłanie komendy się nie powiodło, przekieruj do ustawień
+                    redirectToBluetoothSettings();
+                }
             }
 
             @Override
