@@ -17,7 +17,6 @@ import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
-import android.bluetooth.BluetoothProfile;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -56,7 +55,7 @@ public class HomeFragment extends Fragment {
                 }
             }
             if (allPermissionsGranted) {
-                connectToBluetooth();
+                // Nie łączymy się automatycznie
             } else {
                 Toast.makeText(getContext(), "Wymagane uprawnienia do połączenia Bluetooth", Toast.LENGTH_LONG).show();
             }
@@ -88,8 +87,6 @@ public class HomeFragment extends Fragment {
             // Poproś o włączenie Bluetooth
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
-        } else {
-            checkPermissionsAndConnect();
         }
 
         // Ustawienie listenera dla przycisku refreshButton
@@ -98,7 +95,8 @@ public class HomeFragment extends Fragment {
                 mainActivity.sendCommand("Dane\n");
                 mainActivity.sendCommand("Swiatlo\n");
             } else {
-                Toast.makeText(getContext(), "Brak połączenia Bluetooth", Toast.LENGTH_LONG).show();
+                // Spróbuj nawiązać połączenie
+                checkPermissionsAndConnect();
             }
         });
     }
@@ -107,40 +105,19 @@ public class HomeFragment extends Fragment {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             // Dla Androida 12 i wyżej
             if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED ||
-                    ContextCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED ||
-                    ContextCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                    ContextCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
 
                 // Żądanie uprawnień
                 permissionLauncher.launch(new String[]{
                         Manifest.permission.BLUETOOTH_CONNECT,
-                        Manifest.permission.BLUETOOTH_SCAN,
-                        Manifest.permission.ACCESS_FINE_LOCATION
+                        Manifest.permission.BLUETOOTH_SCAN
                 });
             } else {
                 connectToBluetooth();
             }
         } else {
             // Dla Androida poniżej wersji 12
-            if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                // Żądanie uprawnień
-                permissionLauncher.launch(new String[]{
-                        Manifest.permission.ACCESS_FINE_LOCATION
-                });
-            } else {
-                connectToBluetooth();
-            }
-        }
-    }
-
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if(requestCode == REQUEST_ENABLE_BT){
-            if(resultCode == Activity.RESULT_OK){
-                checkPermissionsAndConnect();
-            } else {
-                Toast.makeText(getContext(), "Bluetooth musi być włączony, aby kontynuować", Toast.LENGTH_LONG).show();
-            }
+            connectToBluetooth();
         }
     }
 
@@ -151,6 +128,10 @@ public class HomeFragment extends Fragment {
             public void onConnected(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
                 bluetoothGatt = gatt;
                 HomeFragment.this.characteristic = characteristic;
+
+                // Po połączeniu, wysyłamy komendy
+                mainActivity.sendCommand("Dane\n");
+                mainActivity.sendCommand("Swiatlo\n");
             }
 
             @Override

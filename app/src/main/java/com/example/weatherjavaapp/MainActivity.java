@@ -1,17 +1,13 @@
 package com.example.weatherjavaapp;
 
 import android.Manifest;
-import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 
-import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
@@ -24,7 +20,6 @@ import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothGattDescriptor;
-import android.content.pm.PackageManager;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -97,7 +92,7 @@ public class MainActivity extends AppCompatActivity {
 
     // Metody obsługi Bluetooth
     public boolean isBluetoothConnected() {
-        return bluetoothGatt != null;
+        return bluetoothGatt != null && bluetoothGatt.getDevice().getBondState() == BluetoothDevice.BOND_BONDED;
     }
 
     public BluetoothGatt getBluetoothGatt() {
@@ -122,8 +117,7 @@ public class MainActivity extends AppCompatActivity {
         // Sprawdzenie uprawnień
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
                 (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED ||
-                        ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED ||
-                        ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)) {
+                        ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED)) {
             Toast.makeText(this, "Brak uprawnień Bluetooth", Toast.LENGTH_LONG).show();
             return;
         }
@@ -147,8 +141,12 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        // Nawiązanie połączenia
-        bluetoothGatt = device.connectGatt(this, false, bluetoothGattCallback);
+        // Nawiązanie połączenia tylko jeśli nie jest już połączone
+        if (bluetoothGatt == null) {
+            bluetoothGatt = device.connectGatt(this, false, bluetoothGattCallback);
+        } else {
+            notifyConnected();
+        }
     }
 
     public void removeBluetoothConnectionCallback(BluetoothConnectionCallback callback) {
