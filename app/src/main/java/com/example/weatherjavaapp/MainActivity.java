@@ -31,12 +31,13 @@ public class MainActivity extends AppCompatActivity {
             if (id == R.id.home) {
                 replaceFragment(new HomeFragment());
             } else if (id == R.id.charts) {
-                replaceFragment(new ChartsFragment());
+                replaceFragment(new ChartsFragment()); // Odwołanie do ChartsFragment
             } else if (id == R.id.settings) {
                 replaceFragment(new SettingsFragment());
             }
             return true;
         });
+
     }
 
     private void replaceFragment (Fragment fragment) {
