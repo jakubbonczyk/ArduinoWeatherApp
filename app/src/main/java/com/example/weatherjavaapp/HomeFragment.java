@@ -38,6 +38,9 @@ public class HomeFragment extends Fragment {
     private BluetoothGatt bluetoothGatt;
     private BluetoothGattCharacteristic characteristic;
 
+    // Referencja do callbacku
+    private MainActivity.BluetoothConnectionCallback connectionCallback;
+
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
@@ -92,8 +95,8 @@ public class HomeFragment extends Fragment {
         // Ustawienie listenera dla przycisku refreshButton
         binding.refreshButton.setOnClickListener(v -> {
             if (mainActivity.isBluetoothConnected()) {
-                mainActivity.resetFlags();
                 mainActivity.sendCommand("Dane\n");
+                mainActivity.sendCommand("Swiatlo\n");
             } else {
                 Toast.makeText(getContext(), "Brak połączenia Bluetooth", Toast.LENGTH_LONG).show();
             }
@@ -142,16 +145,8 @@ public class HomeFragment extends Fragment {
     }
 
     private void connectToBluetooth() {
-        // Sprawdź, czy połączenie już istnieje
-        if (mainActivity.isBluetoothConnected()) {
-            bluetoothGatt = mainActivity.getBluetoothGatt();
-            characteristic = mainActivity.getCharacteristic();
-            // Jeśli połączenie istnieje, możesz od razu korzystać z danych
-            return;
-        }
-
-        // Jeśli połączenie nie istnieje, nawiąż nowe
-        mainActivity.connectToBluetooth(new MainActivity.BluetoothConnectionCallback() {
+        // Tworzymy nowy callback
+        connectionCallback = new MainActivity.BluetoothConnectionCallback() {
             @Override
             public void onConnected(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
                 bluetoothGatt = gatt;
@@ -164,7 +159,10 @@ public class HomeFragment extends Fragment {
                     getActivity().runOnUiThread(() -> updateUI(data));
                 }
             }
-        });
+        };
+
+        // Rejestrujemy callback w MainActivity
+        mainActivity.connectToBluetooth(connectionCallback);
     }
 
     private void updateUI(String data) {
@@ -174,16 +172,23 @@ public class HomeFragment extends Fragment {
         for (String line : lines) {
             if (line.contains("Temperatura:")) {
                 String temperature = line.substring(line.indexOf(":") + 1).trim();
-                binding.textView.setText(temperature + " °C");
+                binding.textView.setText(temperature);
             } else if (line.contains("Wilgotność:")) {
                 String humidity = line.substring(line.indexOf(":") + 1).trim();
-                binding.textView2.setText(humidity + " %");
+                binding.textView2.setText(humidity);
             } else if (line.contains("Natężenie światła:")) {
                 String lux = line.substring(line.indexOf(":") + 1).trim();
-                binding.textView4.setText(lux + " lx");
+                binding.textView4.setText(lux);
             }
         }
     }
 
-    // Usuń metodę onDestroy(), aby nie zamykać połączenia
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        // Usuwamy callback z MainActivity
+        if (mainActivity != null && connectionCallback != null) {
+            mainActivity.removeBluetoothConnectionCallback(connectionCallback);
+        }
+    }
 }
