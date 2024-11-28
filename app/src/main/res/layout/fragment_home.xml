@@ -29,7 +29,7 @@
 
                 <ImageView
                     android:id="@+id/imageView"
-                    android:layout_width="0dp"
+                    android:layout_width="150dp"
                     android:layout_height="100dp"
                     app:layout_constraintBottom_toTopOf="@+id/guideline6"
                     app:layout_constraintEnd_toEndOf="parent"
@@ -121,7 +121,7 @@
                     android:id="@+id/textView"
                     android:layout_width="0dp"
                     android:layout_height="0dp"
-                    android:text="21\u00B0C"
+                    android:text="-"
                     android:textColor="@color/white"
                     android:textSize="100dp"
                     android:gravity="center"
@@ -134,7 +134,7 @@
                     android:id="@+id/textView2"
                     android:layout_width="wrap_content"
                     android:layout_height="35dp"
-                    android:text="67%"
+                    android:text="-"
                     android:textSize="20dp"
                     android:textStyle="bold"
                     android:gravity="center"
@@ -165,13 +165,13 @@
                     app:srcCompat="@drawable/water"
                     app:tint="@color/white" />
 
-                <!--                natezenie swiatla-->
+                <!--natezenie swiatla-->
 
                 <TextView
                     android:id="@+id/textView4"
                     android:layout_width="wrap_content"
                     android:layout_height="35dp"
-                    android:text="100000 lux"
+                    android:text="-"
                     android:textSize="20dp"
                     android:textStyle="bold"
                     android:gravity="center"
@@ -238,6 +238,16 @@
                     app:layout_constraintTop_toTopOf="@+id/guideline10"
                     app:srcCompat="@drawable/calendar"
                     app:tint="@color/white" />
+
+                <ImageButton
+                    android:id="@+id/refreshButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:layout_constraintBottom_toTopOf="@+id/guideline6"
+                    app:layout_constraintEnd_toStartOf="@+id/imageView"
+                    app:layout_constraintStart_toStartOf="@+id/guideline12"
+                    app:layout_constraintTop_toTopOf="@+id/guideline7"
+                    app:srcCompat="@android:drawable/ic_popup_sync" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 

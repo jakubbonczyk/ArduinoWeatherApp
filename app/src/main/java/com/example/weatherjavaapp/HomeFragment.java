@@ -3,12 +3,8 @@ package com.example.weatherjavaapp;
 import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
-import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
-import android.bluetooth.BluetoothGattDescriptor;
-import android.bluetooth.BluetoothGattService;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -30,23 +26,16 @@ import android.widget.Toast;
 
 import com.example.weatherjavaapp.databinding.FragmentHomeBinding;
 
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-
 public class HomeFragment extends Fragment {
 
     private FragmentHomeBinding binding;
     private BluetoothAdapter bluetoothAdapter;
-    private BluetoothGatt bluetoothGatt;
-
-    private static final String DEVICE_NAME = "HC-05"; // lub nazwa Twojego urządzenia BLE
-    private static final UUID SERVICE_UUID = UUID.fromString("0000FFE0-0000-1000-8000-00805F9B34FB"); // Przykładowy UUID usługi
-    private static final UUID CHARACTERISTIC_UUID = UUID.fromString("0000FFE1-0000-1000-8000-00805F9B34FB"); // Przykładowy UUID charakterystyki
 
     private static final int REQUEST_ENABLE_BT = 2;
     private ActivityResultLauncher<String[]> permissionLauncher;
 
+    private MainActivity mainActivity;
+    private BluetoothGatt bluetoothGatt;
     private BluetoothGattCharacteristic characteristic;
 
     @Override
@@ -74,9 +63,18 @@ public class HomeFragment extends Fragment {
     }
 
     @Override
+    public void onAttach(@NonNull android.content.Context context) {
+        super.onAttach(context);
+        if (context instanceof MainActivity) {
+            mainActivity = (MainActivity) context;
+        } else {
+            throw new RuntimeException(context.toString() + " musi być MainActivity");
+        }
+    }
+
+    @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (bluetoothAdapter == null) {
             Toast.makeText(getActivity(), "Bluetooth nie jest dostępny", Toast.LENGTH_LONG).show();
@@ -90,6 +88,16 @@ public class HomeFragment extends Fragment {
         } else {
             checkPermissionsAndConnect();
         }
+
+        // Ustawienie listenera dla przycisku refreshButton
+        binding.refreshButton.setOnClickListener(v -> {
+            if (mainActivity.isBluetoothConnected()) {
+                mainActivity.resetFlags();
+                mainActivity.sendCommand("Dane\n");
+            } else {
+                Toast.makeText(getContext(), "Brak połączenia Bluetooth", Toast.LENGTH_LONG).show();
+            }
+        });
     }
 
     private void checkPermissionsAndConnect() {
@@ -134,115 +142,48 @@ public class HomeFragment extends Fragment {
     }
 
     private void connectToBluetooth() {
-        BluetoothDevice device = null;
-
-        // Sprawdzenie uprawnień
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-                (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED ||
-                        ContextCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED ||
-                        ContextCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)) {
-            if (isAdded()) {
-                getActivity().runOnUiThread(() ->
-                        Toast.makeText(getActivity(), "Brak uprawnień Bluetooth", Toast.LENGTH_LONG).show()
-                );
-            }
+        // Sprawdź, czy połączenie już istnieje
+        if (mainActivity.isBluetoothConnected()) {
+            bluetoothGatt = mainActivity.getBluetoothGatt();
+            characteristic = mainActivity.getCharacteristic();
+            // Jeśli połączenie istnieje, możesz od razu korzystać z danych
             return;
         }
 
-        // Znalezienie urządzenia po nazwie
-        if (bluetoothAdapter.isDiscovering()) {
-            bluetoothAdapter.cancelDiscovery();
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            bluetoothAdapter.startDiscovery();
-        }
-
-        Set<BluetoothDevice> pairedDevices = bluetoothAdapter.getBondedDevices();
-        for (BluetoothDevice bondedDevice : pairedDevices) {
-            if (bondedDevice.getName() != null && bondedDevice.getName().contains(DEVICE_NAME)) {
-                device = bondedDevice;
-                break;
+        // Jeśli połączenie nie istnieje, nawiąż nowe
+        mainActivity.connectToBluetooth(new MainActivity.BluetoothConnectionCallback() {
+            @Override
+            public void onConnected(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+                bluetoothGatt = gatt;
+                HomeFragment.this.characteristic = characteristic;
             }
-        }
 
-        if (device == null) {
-            Toast.makeText(getActivity(), "Nie znaleziono urządzenia " + DEVICE_NAME, Toast.LENGTH_LONG).show();
-            return;
-        }
-
-        // Nawiązanie połączenia BLE
-        bluetoothGatt = device.connectGatt(getContext(), false, bluetoothGattCallback);
-    }
-
-    private final BluetoothGattCallback bluetoothGattCallback = new BluetoothGattCallback() {
-
-        @Override
-        public void onConnectionStateChange(@NonNull BluetoothGatt gatt, int status, int newState) throws SecurityException {
-            if (newState == BluetoothProfile.STATE_CONNECTED) {
-                Log.d("BluetoothDebug", "Połączono z urządzeniem!");
-                bluetoothGatt.discoverServices();
-            } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                Log.d("BluetoothDebug", "Rozłączono z urządzeniem");
-            }
-        }
-
-        @Override
-        public void onServicesDiscovered(@NonNull BluetoothGatt gatt, int status) throws SecurityException {
-            if (status == BluetoothGatt.GATT_SUCCESS) {
-                Log.d("BluetoothDebug", "Odkryto usługi");
-                // Znajdź odpowiednią usługę i charakterystykę
-                BluetoothGattService service = bluetoothGatt.getService(SERVICE_UUID);
-                if (service != null) {
-                    characteristic = service.getCharacteristic(CHARACTERISTIC_UUID);
-                    if (characteristic != null) {
-                        // Włącz powiadomienia o zmianie charakterystyki
-                        bluetoothGatt.setCharacteristicNotification(characteristic, true);
-                        BluetoothGattDescriptor descriptor = characteristic.getDescriptor(UUID.fromString("00002902-0000-1000-8000-00805F9B34FB"));
-                        if (descriptor != null) {
-                            descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-                            bluetoothGatt.writeDescriptor(descriptor);
-                        }
-                    }
+            @Override
+            public void onDataReceived(String data) {
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> updateUI(data));
                 }
-            } else {
-                Log.w("BluetoothDebug", "onServicesDiscovered received: " + status);
             }
-        }
-
-        @Override
-        public void onCharacteristicChanged(@NonNull BluetoothGatt gatt, @NonNull BluetoothGattCharacteristic characteristic) {
-            // Odbierz dane z urządzenia
-            byte[] data = characteristic.getValue();
-            String receivedData = new String(data);
-            Log.d("BluetoothData", "Odebrano: " + receivedData);
-            if (getActivity() != null) {
-                getActivity().runOnUiThread(() -> updateUI(receivedData));
-            }
-        }
-    };
+        });
+    }
 
     private void updateUI(String data) {
-        if (data.contains("Temperatura")) {
-            String temperature = data.substring(data.indexOf(":") + 1, data.indexOf("°")).trim();
-            binding.textView.setText(temperature + "°C");
-        }
-        if (data.contains("Wilgotność")) {
-            String humidity = data.substring(data.indexOf(":") + 1, data.indexOf("%")).trim();
-            binding.textView2.setText(humidity + "%");
-        }
-        if (data.contains("Natężenie światła")) {
-            String lux = data.substring(data.indexOf(":") + 1, data.indexOf("lx")).trim();
-            binding.textView4.setText(lux + " lx");
+        Log.d("BluetoothDebug", "updateUI called with data: " + data);
+        // Podziel dane na linie, jeśli jest ich więcej
+        String[] lines = data.split("\\r?\\n");
+        for (String line : lines) {
+            if (line.contains("Temperatura:")) {
+                String temperature = line.substring(line.indexOf(":") + 1).trim();
+                binding.textView.setText(temperature + " °C");
+            } else if (line.contains("Wilgotność:")) {
+                String humidity = line.substring(line.indexOf(":") + 1).trim();
+                binding.textView2.setText(humidity + " %");
+            } else if (line.contains("Natężenie światła:")) {
+                String lux = line.substring(line.indexOf(":") + 1).trim();
+                binding.textView4.setText(lux + " lx");
+            }
         }
     }
 
-    @Override
-    public void onDestroy() throws SecurityException {
-        super.onDestroy();
-        if (bluetoothGatt != null) {
-            bluetoothGatt.close();
-            bluetoothGatt = null;
-        }
-    }
+    // Usuń metodę onDestroy(), aby nie zamykać połączenia
 }

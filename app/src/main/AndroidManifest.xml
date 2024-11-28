@@ -20,6 +20,7 @@
         android:theme="@style/Theme.WeatherJavaApp"
         tools:targetApi="31">
 
+        <service android:name=".BluetoothLeService" />
 
         <activity
             android:name=".MainActivity"
