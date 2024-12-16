@@ -11,7 +11,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     // Nazwa bazy danych
     private static final String DATABASE_NAME = "weather_station.db";
     // Wersja bazy danych
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 3;
 
     // Nazwa tabeli
     public static final String TABLE_MEASUREMENTS = "measurements";
@@ -56,7 +56,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private void insertDummyData(SQLiteDatabase db) {
         // Przygotowanie sztucznych danych
         long currentTime = System.currentTimeMillis();
-        for (int i = 0; i < 50; i++) {
+        for (int i = 0; i < 720; i++) {
             long timestamp = currentTime - (i * 3600 * 1000); // Co godzinę wstecz
             double temperature = 20 + Math.random() * 10; // Temperatura między 20 a 30
             double humidity = 40 + Math.random() * 20; // Wilgotność między 40 a 60

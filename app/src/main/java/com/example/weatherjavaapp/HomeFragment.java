@@ -17,6 +17,7 @@ import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
+import android.os.Handler;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -77,6 +78,7 @@ public class HomeFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (bluetoothAdapter == null) {
             Toast.makeText(getActivity(), "Bluetooth nie jest dostępny", Toast.LENGTH_LONG).show();
@@ -88,6 +90,9 @@ public class HomeFragment extends Fragment {
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
         }
+
+        // Zmień tło i ikonę na podstawie godziny
+        updateBackgroundAndIcon();
 
         // Ustawienie listenera dla przycisku refreshButton
         binding.refreshButton.setOnClickListener(v -> {
@@ -105,7 +110,10 @@ public class HomeFragment extends Fragment {
                 connectToBluetooth();
             }
         });
+
+        handler.post(updateDateTimeTask);
     }
+
 
     private void redirectToBluetoothSettings() {
         Intent intent = new Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS);
@@ -185,9 +193,57 @@ public class HomeFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+
+        handler.removeCallbacks(updateDateTimeTask);
+
         // Usuwamy callback z MainActivity
         if (mainActivity != null && connectionCallback != null) {
             mainActivity.removeBluetoothConnectionCallback(connectionCallback);
         }
     }
+
+    private void updateDateTime() {
+        // Użyj formatu daty
+        java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("dd.MM.yyyy HH:mm:ss", java.util.Locale.getDefault());
+
+        // Pobierz aktualny czas
+        String currentDateTime = dateFormat.format(System.currentTimeMillis());
+
+        // Podziel datę i czas
+        String[] parts = currentDateTime.split(" ");
+        String currentDate = parts[0];
+        String currentTime = parts[1];
+
+        // Ustaw w odpowiednich TextView
+        binding.textView6.setText(currentDate); // Data w formacie dd.MM.yyyy
+        binding.textView7.setText(currentTime); // Czas w formacie HH:mm:ss
+    }
+
+    private final Handler handler = new Handler();
+    private final Runnable updateDateTimeTask = new Runnable() {
+        @Override
+        public void run() {
+            updateDateTime();
+            handler.postDelayed(this, 1000);
+        }
+    };
+
+    private void updateBackgroundAndIcon() {
+
+        java.util.Calendar calendar = java.util.Calendar.getInstance();
+        int hour = calendar.get(java.util.Calendar.HOUR_OF_DAY);
+
+        if (hour >= 17) {
+            // Ustaw gradient nocny
+            binding.frameLayout.setBackgroundResource(R.drawable.gradient_night);
+            // Zmień ikonę na księżyc
+            binding.imageViewWeatherIcon.setImageResource(R.drawable.moon);
+        } else {
+            // Ustaw gradient dzienny
+            binding.frameLayout.setBackgroundResource(R.drawable.gradient_day);
+            // Zmień ikonę na słońce
+            binding.imageViewWeatherIcon.setImageResource(R.drawable.sun);
+        }
+    }
+
 }

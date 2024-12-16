@@ -169,8 +169,20 @@ public class ChartsFragment extends Fragment {
 
     private void updateChart(LineChart chart, List<Entry> entries, String label) {
         LineDataSet dataSet = new LineDataSet(entries, label);
+        dataSet.setColor(android.graphics.Color.WHITE); // Kolor linii wykresu
+        dataSet.setValueTextColor(android.graphics.Color.WHITE); // Kolor wartości na wykresie
+
         LineData lineData = new LineData(dataSet);
         chart.setData(lineData);
+
+        // Ustawienia koloru osi i innych elementów
+        chart.getXAxis().setTextColor(android.graphics.Color.WHITE); // Kolor tekstu osi X
+        chart.getAxisLeft().setTextColor(android.graphics.Color.WHITE); // Kolor tekstu osi Y (lewa strona)
+        chart.getAxisRight().setTextColor(android.graphics.Color.WHITE); // Kolor tekstu osi Y (prawa strona)
+        chart.getLegend().setTextColor(android.graphics.Color.WHITE); // Kolor legendy
+//        chart.getDescription().setTextColor(android.graphics.Color.WHITE); // Kolor opisu wykresu
+
         chart.invalidate(); // Odśwież wykres
     }
+
 }

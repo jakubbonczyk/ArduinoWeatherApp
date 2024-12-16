@@ -1,18 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/black"
-    tools:context=".SettingsFragment">
+    android:orientation="vertical"
+    android:padding="16dp">
 
-    <!-- TODO: Update blank fragment layout -->
+    <!-- Nagłówek -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:text="Ustawienia"
         android:textColor="@color/white"
-        android:text="Settings Fragment"
-        android:textSize="26dp"
-        android:layout_gravity="center"/>
+        android:textSize="24sp"
+        android:layout_gravity="center"
+        android:layout_marginBottom="24dp" />
 
-</FrameLayout>
+    <!-- Przycisk do wyboru urządzeń Bluetooth -->
+    <Button
+        android:id="@+id/button_select_bluetooth_device"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Wybierz urządzenie Bluetooth"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Spinner do wyboru interwału pobierania danych -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Interwał pobierania danych:"
+        android:textColor="@color/white"
+        android:layout_marginBottom="8dp" />
+
+    <Spinner
+        android:id="@+id/spinner_interval"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:spinnerMode="dropdown" />
+</LinearLayout>
