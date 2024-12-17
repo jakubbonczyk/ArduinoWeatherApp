@@ -10,6 +10,12 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -17,18 +23,13 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
-
-import android.util.Log;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.Toast;
-
 import com.example.weatherjavaapp.databinding.FragmentHomeBinding;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Locale;
 
 public class HomeFragment extends Fragment {
@@ -44,9 +45,17 @@ public class HomeFragment extends Fragment {
     private BluetoothGattCharacteristic characteristic;
 
     private DatabaseHelper dbHelper;
-
-    // Referencja do callbacku
     private MainActivity.BluetoothConnectionCallback connectionCallback;
+
+    // Handler i Runnable do aktualizacji czasu
+    private Handler timeHandler = new Handler();
+    private Runnable timeUpdater = new Runnable() {
+        @Override
+        public void run() {
+            updateDateTimeAndBackground();
+            timeHandler.postDelayed(this, 1000); // odśwież co 1s
+        }
+    };
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
@@ -96,15 +105,17 @@ public class HomeFragment extends Fragment {
         binding.refreshButton.setOnClickListener(v -> {
             if (mainActivity.isBluetoothConnected()) {
                 boolean commandSent = mainActivity.sendCommand("{\"cmd\": \"getData\"}\n");
+                Toast.makeText(getActivity(), "Aktualizuję dane...", Toast.LENGTH_LONG).show();
                 if (!commandSent) {
                     redirectToBluetoothSettings();
+                    Toast.makeText(getActivity(), "Inicjalizuję połączenie...", Toast.LENGTH_LONG).show();
                 }
             } else {
                 connectToBluetooth();
             }
         });
 
-        updateUIFromDatabase(); // Odśwież UI na starcie
+        updateUIFromDatabase();
     }
 
     @Override
@@ -127,9 +138,18 @@ public class HomeFragment extends Fragment {
             };
             mainActivity.addBluetoothConnectionCallback(connectionCallback);
         }
+
         updateUIFromDatabase();
+        // Uruchom powtarzane odświeżanie czasu
+        timeHandler.post(timeUpdater);
     }
 
+    @Override
+    public void onPause() {
+        super.onPause();
+        // Zatrzymaj odświeżanie czasu, gdy fragment nie jest widoczny
+        timeHandler.removeCallbacks(timeUpdater);
+    }
 
     private void redirectToBluetoothSettings() {
         Intent intent = new Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS);
@@ -155,7 +175,7 @@ public class HomeFragment extends Fragment {
 
             @Override
             public void onDataReceived(String data) {
-                if (getActivity() != null) { // Upewnij się, że aktywność nie jest null
+                if (getActivity() != null) {
                     getActivity().runOnUiThread(() -> updateUI(data));
                 } else {
                     Log.w("HomeFragment", "Fragment nie jest już podłączony do aktywności.");
@@ -211,11 +231,42 @@ public class HomeFragment extends Fragment {
         } else {
             Log.d("HomeFragment", "Brak danych w bazie.");
         }
+
+        // Wywołamy tutaj tylko raz, bo updateDateTimeAndBackground będzie zmieniał czas co sekundę
+        // Ale możemy wywołać też za każdym razem, by mieć pewność, że tło jest poprawnie ustawione
+        updateDateTimeAndBackground();
+    }
+
+    private void updateDateTimeAndBackground() {
+        // Aktualizacja daty i godziny z sekundami
+        Calendar now = Calendar.getInstance();
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy", Locale.getDefault());
+        SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
+
+        String currentDate = dateFormat.format(now.getTime());
+        String currentTime = timeFormat.format(now.getTime());
+
+        binding.textView6.setText(currentDate); // data
+        binding.textView7.setText(currentTime); // godzina z sekundami
+
+        // Sprawdzenie pory dnia i ustawianie gradientu na frameLayout
+        int hour = now.get(Calendar.HOUR_OF_DAY);
+        if (hour >= 21 || hour < 6) {
+            // Noc
+            binding.frameLayout.setBackground(ContextCompat.getDrawable(requireContext(), R.drawable.gradient_night));
+            binding.imageViewWeatherIcon.setImageResource(R.drawable.moon);
+        } else {
+            // Dzień
+            binding.frameLayout.setBackground(ContextCompat.getDrawable(requireContext(), R.drawable.gradient_day));
+            binding.imageViewWeatherIcon.setImageResource(R.drawable.sun);
+        }
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        // Upewniamy się, że usuniemy callback po zniszczeniu widoku
+        timeHandler.removeCallbacks(timeUpdater);
     }
 
 }
