@@ -20,6 +20,7 @@ public class SettingsFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
+
         View view = inflater.inflate(R.layout.fragment_settings, container, false);
 
         // Przycisk wyboru urządzenia Bluetooth
@@ -40,14 +41,15 @@ public class SettingsFragment extends Fragment {
     }
 
     private void setupIntervalSpinner(Spinner spinner) {
-        String[] intervals = {"15 minut", "30 minut", "1 godzina", "2 godziny"};
+        // Dodajemy opcję "5 sekund" do łatwego testu
+        String[] intervals = {"5 sekund (only for devs)", "15 minut", "30 minut", "1 godzina", "2 godziny"};
         ArrayAdapter<String> adapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_spinner_item, intervals);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinner.setAdapter(adapter);
 
         // Pobierz zapisane ustawienie
         String savedInterval = getActivity().getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
-                .getString("data_interval", "15 minut");
+                .getString("data_interval", "5 sekund (only for devs)");
         int selectedIndex = java.util.Arrays.asList(intervals).indexOf(savedInterval);
         spinner.setSelection(selectedIndex);
 
@@ -60,6 +62,8 @@ public class SettingsFragment extends Fragment {
                         .edit()
                         .putString("data_interval", selectedInterval)
                         .apply();
+                // Dodajemy log, żeby sprawdzić, co zostało zapisane
+                android.util.Log.d("SettingsFragment", "Wybrano interwał: " + selectedInterval);
             }
 
             @Override
@@ -68,15 +72,12 @@ public class SettingsFragment extends Fragment {
         });
     }
 
-
     @Override
     public void onResume() {
         super.onResume();
         String savedInterval = getActivity().getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
-                .getString("data_interval", "15 minut");
+                .getString("data_interval", "5 sekund (only for devs)");
         Toast.makeText(getContext(), "Zapisany interwał: " + savedInterval, Toast.LENGTH_SHORT).show();
+        android.util.Log.d("SettingsFragment", "Aktualny zapisany interwał: " + savedInterval);
     }
-
-
-
 }
