@@ -8,9 +8,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.DatePicker;
-import android.widget.TextView;
 
+import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -52,7 +51,7 @@ public class ChartsFragment extends Fragment {
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_charts, container, false);
     }
@@ -81,7 +80,8 @@ public class ChartsFragment extends Fragment {
 
         buttonUpdateCharts.setOnClickListener(v -> loadChartData());
 
-        loadChartData(); // Załaduj dane przy starcie
+        // Załaduj dane przy starcie
+        loadChartData();
     }
 
     private void showDatePickerDialog(boolean isStartDate) {
@@ -119,9 +119,8 @@ public class ChartsFragment extends Fragment {
 
         Cursor cursor = dbHelper.getMeasurements(startDate, endDate);
 
-        List<Entry> temperatureEntries = new ArrayList<>();
-        List<Entry> humidityEntries = new ArrayList<>();
-        List<Entry> luminanceEntries = new ArrayList<>();
+        List<Measurement> measurements = new ArrayList<>();
+        long earliestTimestamp = Long.MAX_VALUE;
 
         if (cursor != null && cursor.moveToFirst()) {
             Log.d("ChartsFragment", "Pobrano dane z bazy: " + cursor.getCount() + " rekordów.");
@@ -137,15 +136,10 @@ public class ChartsFragment extends Fragment {
                 double hum = cursor.getDouble(humIndex);
                 double lum = cursor.getDouble(lumIndex);
 
-                if (temp > 0) {
-                    temperatureEntries.add(new Entry(timestamp, (float) temp));
+                if (timestamp < earliestTimestamp) {
+                    earliestTimestamp = timestamp;
                 }
-                if (hum > 0) {
-                    humidityEntries.add(new Entry(timestamp, (float) hum));
-                }
-                if (lum > 0) {
-                    luminanceEntries.add(new Entry(timestamp, (float) lum));
-                }
+                measurements.add(new Measurement(timestamp, temp, hum, lum));
             } while (cursor.moveToNext());
 
             cursor.close();
@@ -153,12 +147,29 @@ public class ChartsFragment extends Fragment {
             Log.d("ChartsFragment", "Brak danych do wyświetlenia.");
         }
 
-        updateChart(temperatureChart, temperatureEntries, "Temperatura");
-        updateChart(humidityChart, humidityEntries, "Wilgotność");
-        updateChart(luminanceChart, luminanceEntries, "Luminancja");
+        List<Entry> temperatureEntries = new ArrayList<>();
+        List<Entry> humidityEntries = new ArrayList<>();
+        List<Entry> luminanceEntries = new ArrayList<>();
+
+        for (Measurement m : measurements) {
+            float normalizedX = (float) ((m.timestamp - earliestTimestamp) / 1000.0);
+            if (m.temp > 0) {
+                temperatureEntries.add(new Entry(normalizedX, (float) m.temp));
+            }
+            if (m.hum > 0) {
+                humidityEntries.add(new Entry(normalizedX, (float) m.hum));
+            }
+            if (m.lum > 0) {
+                luminanceEntries.add(new Entry(normalizedX, (float) m.lum));
+            }
+        }
+
+        updateChart(temperatureChart, temperatureEntries, "Temperatura", earliestTimestamp);
+        updateChart(humidityChart, humidityEntries, "Wilgotność", earliestTimestamp);
+        updateChart(luminanceChart, luminanceEntries, "Luminancja", earliestTimestamp);
     }
 
-    private void updateChart(LineChart chart, List<Entry> entries, String label) {
+    private void updateChart(LineChart chart, List<Entry> entries, String label, long earliestTimestamp) {
         if (entries.isEmpty()) {
             Log.d("ChartsFragment", "Brak danych do wyświetlenia dla wykresu: " + label);
             chart.clear();
@@ -177,7 +188,27 @@ public class ChartsFragment extends Fragment {
         chart.getAxisRight().setTextColor(android.graphics.Color.WHITE);
         chart.getLegend().setTextColor(android.graphics.Color.WHITE);
 
-        chart.getXAxis().setValueFormatter(new TimeAxisFormatter());
+        chart.getXAxis().setGranularityEnabled(true);
+        chart.getXAxis().setGranularity(1f);
+
+        // Przekazujemy earliestTimestamp do formatera, aby poprawnie sformatować daty
+        chart.getXAxis().setValueFormatter(new TimeAxisFormatter(earliestTimestamp));
+
         chart.invalidate(); // Odśwież wykres
+    }
+
+    // Klasa pomocnicza do przechowywania pomiarów
+    private static class Measurement {
+        long timestamp;
+        double temp;
+        double hum;
+        double lum;
+
+        Measurement(long timestamp, double temp, double hum, double lum) {
+            this.timestamp = timestamp;
+            this.temp = temp;
+            this.hum = hum;
+            this.lum = lum;
+        }
     }
 }

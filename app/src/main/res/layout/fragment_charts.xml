@@ -61,34 +61,34 @@
     <com.github.mikephil.charting.charts.LineChart
         android:id="@+id/temperatureChart"
         android:layout_width="0dp"
-        android:layout_height="0dp"
-        app:layout_constraintBottom_toTopOf="@+id/luminanceChart"
+        android:layout_height="170dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHeight_percent="0.25"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/humidityChart" />
+        app:layout_constraintTop_toBottomOf="@+id/labelTemperatureChart" />
 
     <!-- Wykres wilgotności -->
     <com.github.mikephil.charting.charts.LineChart
         android:id="@+id/humidityChart"
         android:layout_width="0dp"
-        android:layout_height="0dp"
+        android:layout_height="170dp"
+        app:layout_constraintBottom_toTopOf="@+id/luminanceChart"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHeight_percent="0.25"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/labelTemperatureChart"
+        app:layout_constraintTop_toBottomOf="@+id/temperatureChart"
         tools:ignore="MissingConstraints" />
 
     <!-- Wykres luminancji -->
     <com.github.mikephil.charting.charts.LineChart
         android:id="@+id/luminanceChart"
         android:layout_width="0dp"
-        android:layout_height="0dp"
+        android:layout_height="170dp"
         app:layout_constraintBottom_toTopOf="@+id/guideline21"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHeight_percent="0.25"
         app:layout_constraintStart_toStartOf="parent"
-/>
+        />
 
     <!-- Etykieta wykresu luminancji -->
     <TextView
@@ -100,7 +100,7 @@
         app:layout_constraintBottom_toTopOf="@+id/luminanceChart"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/temperatureChart" />
+        app:layout_constraintTop_toBottomOf="@+id/humidityChart" />
 
     <!-- Etykieta wykresu wilgotności -->
     <TextView
@@ -109,10 +109,10 @@
         android:layout_height="wrap_content"
         android:text="Wykres wilgotności"
         android:textSize="18sp"
-        app:layout_constraintBottom_toTopOf="@+id/temperatureChart"
+        app:layout_constraintBottom_toTopOf="@+id/humidityChart"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/humidityChart" />
+        app:layout_constraintTop_toBottomOf="@+id/temperatureChart" />
 
 
     <!-- Guideline dla podziału ekranu -->

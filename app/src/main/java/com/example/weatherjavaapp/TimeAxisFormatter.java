@@ -1,24 +1,22 @@
 package com.example.weatherjavaapp;
 
 import com.github.mikephil.charting.formatter.ValueFormatter;
-
 import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Locale;
 
 public class TimeAxisFormatter extends ValueFormatter {
 
-    private final SimpleDateFormat dateFormat;
+    private long baseTime; // earliestTimestamp w milisekundach
+    private SimpleDateFormat sdf = new SimpleDateFormat("HH:mm dd/MM", Locale.getDefault());
 
-    public TimeAxisFormatter() {
-        // Używany format daty - możesz go zmodyfikować
-        this.dateFormat = new SimpleDateFormat("HH:mm\ndd/MM", Locale.getDefault());
+    public TimeAxisFormatter(long baseTime) {
+        this.baseTime = baseTime;
     }
 
     @Override
     public String getFormattedValue(float value) {
-        // Przekształca wartość float (timestamp w milisekundach) na czytelną datę
-        long timestamp = (long) value;
-        return dateFormat.format(new Date(timestamp));
+        // value to sekundy od baseTime
+        long actualTimeMillis = baseTime + (long) (value * 1000L);
+        return sdf.format(actualTimeMillis);
     }
 }

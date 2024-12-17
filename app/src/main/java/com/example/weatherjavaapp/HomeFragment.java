@@ -110,8 +110,26 @@ public class HomeFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        updateUIFromDatabase(); // Odśwież UI po powrocie na fragment
+        if (mainActivity.isBluetoothConnected() && connectionCallback == null) {
+            connectionCallback = new MainActivity.BluetoothConnectionCallback() {
+                @Override
+                public void onConnected(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+                    bluetoothGatt = gatt;
+                    HomeFragment.this.characteristic = characteristic;
+                }
+
+                @Override
+                public void onDataReceived(String data) {
+                    if (getActivity() != null) {
+                        getActivity().runOnUiThread(() -> updateUI(data));
+                    }
+                }
+            };
+            mainActivity.addBluetoothConnectionCallback(connectionCallback);
+        }
+        updateUIFromDatabase();
     }
+
 
     private void redirectToBluetoothSettings() {
         Intent intent = new Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS);
@@ -198,10 +216,6 @@ public class HomeFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        if (mainActivity != null && connectionCallback != null) {
-            mainActivity.removeBluetoothConnectionCallback(connectionCallback);
-            connectionCallback = null; // Usuń referencję do callbacku
-        }
     }
 
 }

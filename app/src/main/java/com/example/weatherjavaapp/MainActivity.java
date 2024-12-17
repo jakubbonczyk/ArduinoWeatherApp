@@ -307,4 +307,15 @@ public class MainActivity extends AppCompatActivity {
             processCommandQueue();
         }
     }
+
+    public void addBluetoothConnectionCallback(BluetoothConnectionCallback callback) {
+        if (!connectionCallbacks.contains(callback)) {
+            connectionCallbacks.add(callback);
+            // Jeśli jesteśmy już połączeni, natychmiast powiadommy callback o gotowości:
+            if (bluetoothGatt != null && characteristic != null && isBluetoothConnected()) {
+                callback.onConnected(bluetoothGatt, characteristic);
+            }
+        }
+    }
+
 }
