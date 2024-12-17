@@ -5,25 +5,21 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.util.Log;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
 
-    // Nazwa bazy danych
     private static final String DATABASE_NAME = "weather_station.db";
-    // Wersja bazy danych
-    private static final int DATABASE_VERSION = 3;
+    private static final int DATABASE_VERSION = 21;
 
-    // Nazwa tabeli
     public static final String TABLE_MEASUREMENTS = "measurements";
 
-    // Kolumny tabeli
     public static final String COLUMN_ID = "_id";
     public static final String COLUMN_TIMESTAMP = "timestamp";
     public static final String COLUMN_TEMPERATURE = "temperature";
     public static final String COLUMN_HUMIDITY = "humidity";
     public static final String COLUMN_LUMINANCE = "luminance";
 
-    // Tworzenie tabeli
     private static final String TABLE_CREATE =
             "CREATE TABLE " + TABLE_MEASUREMENTS + " (" +
                     COLUMN_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
@@ -33,45 +29,51 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     COLUMN_LUMINANCE + " REAL" +
                     ");";
 
-    public DatabaseHelper(Context context) {
+    private static DatabaseHelper instance;
+
+    // Singleton - jedna instancja DatabaseHelper
+    public static synchronized DatabaseHelper getInstance(Context context) {
+        if (instance == null) {
+            instance = new DatabaseHelper(context.getApplicationContext());
+        }
+        return instance;
+    }
+
+    private DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
 
     @Override
     public void onCreate(SQLiteDatabase database) {
-        // Tworzenie tabeli
         database.execSQL(TABLE_CREATE);
-
-        // Dodanie sztucznych danych
-        insertDummyData(database);
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase database, int oldVersion, int newVersion) {
-        // Aktualizacja bazy danych
         database.execSQL("DROP TABLE IF EXISTS " + TABLE_MEASUREMENTS);
         onCreate(database);
     }
 
-    private void insertDummyData(SQLiteDatabase db) {
-        // Przygotowanie sztucznych danych
-        long currentTime = System.currentTimeMillis();
-        for (int i = 0; i < 720; i++) {
-            long timestamp = currentTime - (i * 3600 * 1000); // Co godzinę wstecz
-            double temperature = 20 + Math.random() * 10; // Temperatura między 20 a 30
-            double humidity = 40 + Math.random() * 20; // Wilgotność między 40 a 60
-            double luminance = 100 + Math.random() * 900; // Luminancja między 100 a 1000
+    // Wstawianie danych pomiarowych
+    public void insertMeasurement(long timestamp, Double temperature, Double humidity, Double luminance) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
 
-            ContentValues values = new ContentValues();
-            values.put(COLUMN_TIMESTAMP, timestamp);
-            values.put(COLUMN_TEMPERATURE, temperature);
-            values.put(COLUMN_HUMIDITY, humidity);
-            values.put(COLUMN_LUMINANCE, luminance);
+        values.put(COLUMN_TIMESTAMP, timestamp);
+        values.put(COLUMN_TEMPERATURE, temperature != null ? temperature : null);
+        values.put(COLUMN_HUMIDITY, humidity != null ? humidity : null);
+        values.put(COLUMN_LUMINANCE, luminance != null ? luminance : null);
 
-            db.insert(TABLE_MEASUREMENTS, null, values);
+        long result = db.insert(TABLE_MEASUREMENTS, null, values);
+
+        if (result == -1) {
+            Log.e("DatabaseHelper", "Błąd podczas zapisu danych do bazy.");
+        } else {
+            Log.d("DatabaseHelper", "Zapisano dane do bazy: temp=" + temperature + ", hum=" + humidity + ", lux=" + luminance);
         }
     }
 
+    // Pobieranie danych pomiarowych w zakresie dat
     public Cursor getMeasurements(long startDate, long endDate) {
         SQLiteDatabase db = this.getReadableDatabase();
 
@@ -84,10 +86,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         };
 
         String selection = COLUMN_TIMESTAMP + " BETWEEN ? AND ?";
-        String[] selectionArgs = { String.valueOf(startDate), String.valueOf(endDate) };
+        String[] selectionArgs = {String.valueOf(startDate), String.valueOf(endDate)};
         String orderBy = COLUMN_TIMESTAMP + " ASC";
 
-        return db.query(
+        Cursor cursor = db.query(
                 TABLE_MEASUREMENTS,
                 columns,
                 selection,
@@ -96,6 +98,30 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 null,
                 orderBy
         );
+
+        if (cursor != null) {
+            Log.d("DatabaseHelper", "Znaleziono wierszy: " + cursor.getCount());
+        }
+        return cursor;
     }
 
+    // Pobieranie ostatniego zapisanego rekordu
+    public Cursor getLastMeasurement() {
+        SQLiteDatabase db = this.getReadableDatabase();
+        String query = "SELECT * FROM " + TABLE_MEASUREMENTS +
+                " ORDER BY " + COLUMN_TIMESTAMP + " DESC LIMIT 1";
+        Cursor cursor = db.rawQuery(query, null);
+
+        if (cursor != null) {
+            Log.d("DatabaseHelper", "Pobrano ostatni pomiar z bazy.");
+        }
+        return cursor;
+    }
+
+    // Czyszczenie wszystkich danych
+    public void clearAllData() {
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.delete(TABLE_MEASUREMENTS, null, null);
+        Log.d("DatabaseHelper", "Wyczyszczono wszystkie dane z tabeli.");
+    }
 }

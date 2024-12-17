@@ -1,12 +1,13 @@
 package com.example.weatherjavaapp;
 
 import android.Manifest;
-import android.app.Activity;
+import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.os.Build;
 import android.os.Bundle;
 
@@ -17,7 +18,6 @@ import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
-import android.os.Handler;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -25,6 +25,11 @@ import android.view.ViewGroup;
 import android.widget.Toast;
 
 import com.example.weatherjavaapp.databinding.FragmentHomeBinding;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.Locale;
 
 public class HomeFragment extends Fragment {
 
@@ -38,6 +43,8 @@ public class HomeFragment extends Fragment {
     private BluetoothGatt bluetoothGatt;
     private BluetoothGattCharacteristic characteristic;
 
+    private DatabaseHelper dbHelper;
+
     // Referencja do callbacku
     private MainActivity.BluetoothConnectionCallback connectionCallback;
 
@@ -46,19 +53,15 @@ public class HomeFragment extends Fragment {
                              @Nullable Bundle savedInstanceState) {
         binding = FragmentHomeBinding.inflate(inflater, container, false);
 
-        // Inicjalizacja permissionLauncher
+        // Singleton DatabaseHelper
+        dbHelper = DatabaseHelper.getInstance(getContext());
+
         permissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
-            boolean allPermissionsGranted = true;
             for (Boolean granted : result.values()) {
                 if (!granted) {
-                    allPermissionsGranted = false;
-                    break;
+                    Toast.makeText(getContext(), "Wymagane uprawnienia do Bluetooth", Toast.LENGTH_LONG).show();
+                    return;
                 }
-            }
-            if (allPermissionsGranted) {
-                // Nie łączymy się automatycznie
-            } else {
-                Toast.makeText(getContext(), "Wymagane uprawnienia do połączenia Bluetooth", Toast.LENGTH_LONG).show();
             }
         });
 
@@ -86,163 +89,118 @@ public class HomeFragment extends Fragment {
         }
 
         if (!bluetoothAdapter.isEnabled()) {
-            // Poproś o włączenie Bluetooth
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
         }
 
-        // Zmień tło i ikonę na podstawie godziny
-        updateBackgroundAndIcon();
-
-        // Ustawienie listenera dla przycisku refreshButton
         binding.refreshButton.setOnClickListener(v -> {
             if (mainActivity.isBluetoothConnected()) {
-                // Spróbuj wysłać komendy
-                boolean commandSent = mainActivity.sendCommand("Dane\n");
-                if (commandSent) {
-                    mainActivity.sendCommand("Swiatlo\n");
-                } else {
-                    // Jeśli wysyłanie komendy się nie powiodło, przekieruj do ustawień
+                boolean commandSent = mainActivity.sendCommand("{\"cmd\": \"getData\"}\n");
+                if (!commandSent) {
                     redirectToBluetoothSettings();
                 }
             } else {
-                // Jeśli nie jesteśmy połączeni, spróbuj nawiązać połączenie
                 connectToBluetooth();
             }
         });
 
-        handler.post(updateDateTimeTask);
+        updateUIFromDatabase(); // Odśwież UI na starcie
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        updateUIFromDatabase(); // Odśwież UI po powrocie na fragment
+    }
 
     private void redirectToBluetoothSettings() {
         Intent intent = new Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS);
         startActivity(intent);
-        Toast.makeText(getContext(), "Połącz się z urządzeniem HC-05 w ustawieniach Bluetooth", Toast.LENGTH_LONG).show();
+        Toast.makeText(getContext(), "Połącz się z urządzeniem HC-05", Toast.LENGTH_LONG).show();
     }
 
     private void connectToBluetooth() {
-        // Sprawdzenie uprawnień
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED ||
-                    ContextCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
-
-                // Żądanie uprawnień
-                permissionLauncher.launch(new String[]{
-                        Manifest.permission.BLUETOOTH_CONNECT,
-                        Manifest.permission.BLUETOOTH_SCAN
-                });
-            } else {
-                // Nawiąż połączenie
-                initiateBluetoothConnection();
+            if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                permissionLauncher.launch(new String[]{Manifest.permission.BLUETOOTH_CONNECT});
+                return;
             }
-        } else {
-            // Dla Androida poniżej wersji 12
-            initiateBluetoothConnection();
         }
-    }
 
-    private void initiateBluetoothConnection() {
-        // Tworzymy nowy callback
         connectionCallback = new MainActivity.BluetoothConnectionCallback() {
             @Override
             public void onConnected(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
                 bluetoothGatt = gatt;
                 HomeFragment.this.characteristic = characteristic;
-
-                // Po połączeniu, wysyłamy komendy
-                boolean commandSent = mainActivity.sendCommand("Dane\n");
-                if (commandSent) {
-                    mainActivity.sendCommand("Swiatlo\n");
-                } else {
-                    // Jeśli wysyłanie komendy się nie powiodło, przekieruj do ustawień
-                    redirectToBluetoothSettings();
-                }
+                mainActivity.sendCommand("{\"cmd\": \"getData\"}\n");
             }
 
             @Override
             public void onDataReceived(String data) {
-                if (getActivity() != null) {
+                if (getActivity() != null) { // Upewnij się, że aktywność nie jest null
                     getActivity().runOnUiThread(() -> updateUI(data));
+                } else {
+                    Log.w("HomeFragment", "Fragment nie jest już podłączony do aktywności.");
                 }
             }
         };
 
-        // Rejestrujemy callback w MainActivity
         mainActivity.connectToBluetooth(connectionCallback);
     }
 
     private void updateUI(String data) {
-        Log.d("BluetoothDebug", "updateUI called with data: " + data);
-        // Podziel dane na linie, jeśli jest ich więcej
-        String[] lines = data.split("\\r?\\n");
-        for (String line : lines) {
-            if (line.contains("Temperatura:")) {
-                String temperature = line.substring(line.indexOf(":") + 1).trim();
-                binding.textView.setText(temperature);
-            } else if (line.contains("Wilgotność:")) {
-                String humidity = line.substring(line.indexOf(":") + 1).trim();
-                binding.textView2.setText(humidity);
-            } else if (line.contains("Natężenie światła:")) {
-                String lux = line.substring(line.indexOf(":") + 1).trim();
-                binding.textView4.setText(lux);
-            }
+        Log.d("BluetoothDebug", "Otrzymano dane: " + data);
+
+        try {
+            JSONObject jsonObject = new JSONObject(data);
+
+            double temperature = jsonObject.optDouble("temp", -1);
+            double humidity = jsonObject.optDouble("hum", -1);
+            double luminance = jsonObject.optDouble("lux", -1);
+
+            Log.d("BluetoothDebug", "Parsowane wartości: temp=" + temperature + ", hum=" + humidity + ", lux=" + luminance);
+
+            long currentTime = System.currentTimeMillis();
+
+            dbHelper.insertMeasurement(
+                    currentTime,
+                    temperature != -1 ? temperature : null,
+                    humidity != -1 ? humidity : null,
+                    luminance != -1 ? luminance : null
+            );
+
+            updateUIFromDatabase(); // Aktualizacja UI z bazy danych
+
+        } catch (JSONException e) {
+            Log.e("BluetoothDebug", "Błąd parsowania JSON: " + e.getMessage());
+        }
+    }
+
+    private void updateUIFromDatabase() {
+        Cursor cursor = dbHelper.getLastMeasurement();
+        if (cursor != null && cursor.moveToFirst()) {
+            @SuppressLint("Range") double temp = cursor.getDouble(cursor.getColumnIndex(DatabaseHelper.COLUMN_TEMPERATURE));
+            @SuppressLint("Range") double hum = cursor.getDouble(cursor.getColumnIndex(DatabaseHelper.COLUMN_HUMIDITY));
+            @SuppressLint("Range") double lux = cursor.getDouble(cursor.getColumnIndex(DatabaseHelper.COLUMN_LUMINANCE));
+
+            Log.d("HomeFragment", "Ostatnie wartości: temp=" + temp + ", hum=" + hum + ", lux=" + lux);
+
+            if (temp != 0.0) binding.textView.setText(String.format(Locale.getDefault(), "%.1f °C", temp));
+            if (hum != 0.0) binding.textView2.setText(String.format(Locale.getDefault(), "%.1f %%", hum));
+            if (lux != 0.0) binding.textView4.setText(String.format(Locale.getDefault(), "%.2f lx", lux));
+
+            cursor.close();
+        } else {
+            Log.d("HomeFragment", "Brak danych w bazie.");
         }
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-
-        handler.removeCallbacks(updateDateTimeTask);
-
-        // Usuwamy callback z MainActivity
         if (mainActivity != null && connectionCallback != null) {
             mainActivity.removeBluetoothConnectionCallback(connectionCallback);
-        }
-    }
-
-    private void updateDateTime() {
-        // Użyj formatu daty
-        java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("dd.MM.yyyy HH:mm:ss", java.util.Locale.getDefault());
-
-        // Pobierz aktualny czas
-        String currentDateTime = dateFormat.format(System.currentTimeMillis());
-
-        // Podziel datę i czas
-        String[] parts = currentDateTime.split(" ");
-        String currentDate = parts[0];
-        String currentTime = parts[1];
-
-        // Ustaw w odpowiednich TextView
-        binding.textView6.setText(currentDate); // Data w formacie dd.MM.yyyy
-        binding.textView7.setText(currentTime); // Czas w formacie HH:mm:ss
-    }
-
-    private final Handler handler = new Handler();
-    private final Runnable updateDateTimeTask = new Runnable() {
-        @Override
-        public void run() {
-            updateDateTime();
-            handler.postDelayed(this, 1000);
-        }
-    };
-
-    private void updateBackgroundAndIcon() {
-
-        java.util.Calendar calendar = java.util.Calendar.getInstance();
-        int hour = calendar.get(java.util.Calendar.HOUR_OF_DAY);
-
-        if (hour >= 17) {
-            // Ustaw gradient nocny
-            binding.frameLayout.setBackgroundResource(R.drawable.gradient_night);
-            // Zmień ikonę na księżyc
-            binding.imageViewWeatherIcon.setImageResource(R.drawable.moon);
-        } else {
-            // Ustaw gradient dzienny
-            binding.frameLayout.setBackgroundResource(R.drawable.gradient_day);
-            // Zmień ikonę na słońce
-            binding.imageViewWeatherIcon.setImageResource(R.drawable.sun);
+            connectionCallback = null; // Usuń referencję do callbacku
         }
     }
 
